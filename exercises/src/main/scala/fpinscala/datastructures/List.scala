@@ -7,6 +7,17 @@ which may be `Nil` or another `Cons`.
  */
 case class Cons[+A](head: A, tail: List[A]) extends List[A]
 
+object Test {
+  def main(args: Array[String]): Unit = {
+    println("%s".format(List(1,2,3)))
+    println("x == 3 == %s".format(List.x))
+    def variadic[Int](as: Int*): Unit = println("as == %s".format(as))
+    variadic(1,2,3)
+    variadic(Seq(1,2,3))
+    variadic(Seq(1,2,3): _*)
+  }
+}
+
 object List { // `List` companion object. Contains functions for creating and working with lists.
   def sum(ints: List[Int]): Int = ints match { // A function that uses pattern matching to add up a list of integers
     case Nil => 0 // The sum of the empty list is 0.
@@ -50,19 +61,40 @@ object List { // `List` companion object. Contains functions for creating and wo
     foldRight(ns, 1.0)(_ * _) // `_ * _` is more concise notation for `(x,y) => x * y`; see sidebar
 
 
-  def tail[A](l: List[A]): List[A] = sys.error("todo")
+  def tail[A](l: List[A]): List[A] = l match {
+    case Cons(_, xs) => xs
+    case _ => Nil // could be None
+  }
 
-  def setHead[A](l: List[A], h: A): List[A] = sys.error("todo")
+  def setHead[A](l: List[A], h: A): List[A] = l match {
+    case Cons(_, xs) => Cons(h, xs)
+    case _ => Cons(h, Nil)
+  }
 
-  def drop[A](l: List[A], n: Int): List[A] = sys.error("todo")
+  def drop[A](l: List[A], n: Int): List[A] =
+    if (n > 0) drop(tail(l), n-1)
+    else l
 
-  def dropWhile[A](l: List[A], f: A => Boolean): List[A] = sys.error("todo")
+  def dropWhile[A](l: List[A], f: A => Boolean): List[A] = l match {
+    case Cons(x, xs) if f(x) => xs
+    case _ => l
+  }
 
-  def init[A](l: List[A]): List[A] = sys.error("todo")
+  // ex 3.6
+  def init[A](l: List[A]): List[A] = l match {
+    // isn't O(1) because it needs to find the end, and all preceding items needs to be recreated
+    case Nil => Nil
+    case Cons(x, Nil) => Nil
+    case Cons(x, xs) => Cons(x, init(xs))
+  }
+
+  // read 3.4
 
   def length[A](l: List[A]): Int = sys.error("todo")
 
   def foldLeft[A,B](l: List[A], z: B)(f: (B, A) => B): B = sys.error("todo")
 
   def map[A,B](l: List[A])(f: A => B): List[B] = sys.error("todo")
+
+  // ex 3.24
 }
