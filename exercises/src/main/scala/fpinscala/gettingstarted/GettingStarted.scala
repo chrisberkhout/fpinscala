@@ -36,7 +36,17 @@ object MyModule {
 
   // Exercise 1: Write a function to compute the nth fibonacci number
 
-  def fib(n: Int): Int = ???
+  def fib(n: Int): Int = {
+    @annotation.tailrec
+    def innerFib(n: Int, current: Int = 2, twoBack: Int = 0, oneBack: Int = 1): Int = {
+      if (n == 0) 0
+      else if (n == 1) 1
+      else if (current == n) twoBack + oneBack
+      else innerFib(n, current+1, oneBack, twoBack+oneBack)
+    }
+
+    innerFib(n)
+  }
 
   // This definition and `formatAbs` are very similar..
   private def formatFactorial(n: Int) = {
@@ -120,6 +130,13 @@ object MonomorphicBinarySearch {
 
 object PolymorphicFunctions {
 
+  def main(args: Array[String]): Unit = {
+    println("isSorted[Int] true: %s".format(isSorted[Int](Array(1, 2, 3), (a, b) => a < b)))
+    println("isSorted[Int] false: %s".format(isSorted[Int](Array(1, 4, 3), (a, b) => a < b)))
+    println("isSorted[String] true: %s".format(isSorted[String](Array("aa", "bb", "cc"), (a, b) => a < b)))
+    println("isSorted[String] false: %s".format(isSorted[String](Array("aa", "zz", "cc"), (a, b) => a < b)))
+  }
+
   // Here's a polymorphic version of `binarySearch`, parameterized on
   // a function for testing whether an `A` is greater than another `A`.
   def binarySearch[A](as: Array[A], key: A, gt: (A,A) => Boolean): Int = {
@@ -140,7 +157,8 @@ object PolymorphicFunctions {
 
   // Exercise 2: Implement a polymorphic function to check whether
   // an `Array[A]` is sorted
-  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = ???
+  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean =
+    as.length < 2 || gt(as(0), as(1)) && isSorted(as.tail, gt)
 
   // Polymorphic functions are often so constrained by their type
   // that they only have one implementation! Here's an example:
@@ -153,13 +171,13 @@ object PolymorphicFunctions {
   // Note that `=>` associates to the right, so we could
   // write the return type as `A => B => C`
   def curry[A,B,C](f: (A, B) => C): A => (B => C) =
-    ???
+    a => b => f(a, b)
 
   // NB: The `Function2` trait has a `curried` method already
 
   // Exercise 4: Implement `uncurry`
   def uncurry[A,B,C](f: A => B => C): (A, B) => C =
-    ???
+    (a, b) => f(a)(b)
 
   /*
   NB: There is a method on the `Function` object in the standard library,
@@ -174,5 +192,8 @@ object PolymorphicFunctions {
   // Exercise 5: Implement `compose`
 
   def compose[A,B,C](f: B => C, g: A => B): A => C =
-    ???
+    a => f(g(a))
+    // f compose g
+    // g andThen f
+
 }
