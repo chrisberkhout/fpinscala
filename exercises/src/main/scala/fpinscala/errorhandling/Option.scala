@@ -32,7 +32,9 @@ object Option {
       val x = 42 + 5
       x + y
     }
-    catch { case e: Exception => 43 } // A `catch` block is just a pattern matching block like the ones we've seen. `case e: Exception` is a pattern that matches any `Exception`, and it binds this value to the identifier `e`. The match returns the value 43.
+    catch {
+      case e: Exception => 43
+    } // A `catch` block is just a pattern matching block like the ones we've seen. `case e: Exception` is a pattern that matches any `Exception`, and it binds this value to the identifier `e`. The match returns the value 43.
   }
 
   def failingFn2(i: Int): Int = {
@@ -40,7 +42,9 @@ object Option {
       val x = 42 + 5
       x + ((throw new Exception("fail!")): Int) // A thrown Exception can be given any type; here we're annotating it with the type `Int`
     }
-    catch { case e: Exception => 43 }
+    catch {
+      case e: Exception => 43
+    }
   }
 
   def mean(xs: Seq[Double]): Option[Double] =
@@ -48,20 +52,55 @@ object Option {
     else Some(xs.sum / xs.length)
 
   def variance(xs: Seq[Double]): Option[Double] =
-//    mean(xs).map(m => xs.map(x => math.pow(x - m, 2))).flatMap(mean) // mine
-//    mean(xs) flatMap (m => mean(xs.map(x => math.pow(x - m, 2)))) // answer
+  //    mean(xs).map(m => xs.map(x => math.pow(x - m, 2))).flatMap(mean) // mine
+  //    mean(xs) flatMap (m => mean(xs.map(x => math.pow(x - m, 2)))) // answer
     mean(xs).flatMap(m => mean(xs.map(x => math.pow(x - m, 2)))) // mine rewritten == answer
 
-  // up to 4.3.2
+  def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = (a, b) match {
+    case (Some(aa), Some(bb)) => Some(f(aa, bb))
+    case _ => None
+  }
 
-  def map2[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = sys.error("todo ex 4.3")
+  def map2viaFlatMap[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
+    a.flatMap(aa => b.map(bb => f(aa,bb)))
 
-  def sequence[A](a: List[Option[A]]): Option[List[A]] = sys.error("todo ex 4.4")
 
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = sys.error("todo ex 4.5")
+  def sequence[A](a: List[Option[A]]): Option[List[A]] =
+    a.foldRight[Option[List[A]]](Some(Nil))((x, y) => map2(x, y)(_ :: _))
 
-  // ex 4.6
-  // ex 4.7
-  // ex 4.8
+  // bad: this reverses the list
+  def sequenceViaFoldLeft[A](a: List[Option[A]]): Option[List[A]] =
+    a.foldLeft[Option[List[A]]](Some(Nil))((x, y) => map2(x, y)((xx,yy) => yy :: xx))
 
+  def sequenceViaMatch[A](a: List[Option[A]]): Option[List[A]] = a match {
+    case Nil => Some(Nil)
+    case None :: _ => None
+    case Some(h) :: t => sequenceViaMatch(t).map((tt) => h :: tt)
+  }
+
+  // from answer: combine two last cases by using flatMap
+  def sequenceViaMatchFlatMap[A](a: List[Option[A]]): Option[List[A]] = a match {
+    case Nil => Some(Nil)
+    case h :: t => h.flatMap(hh => sequenceViaMatchFlatMap(t).map((tt) => hh :: tt))
+  }
+
+
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
+    case Nil => Some(Nil)
+    case h :: t => f(h).flatMap(hh => traverse(t)(f).map((tt) => hh :: tt))
+  }
+
+  def sequenceViaTraverse[A](a: List[Option[A]]): Option[List[A]] = traverse(a)(identity)
+}
+
+object Test {
+  def main(args: Array[String]): Unit = {
+    println(s"map2 given one None returns ${Option.map2[Int,Int,Int](Some(1), None)(_+_)}")
+    println(s"sequence ${Option.sequence(List(Some(1), Some(2), Some(3)))}")
+    println(s"sequenceviaFoldLEft ${Option.sequenceViaFoldLeft(List(Some(1), Some(2), Some(3)))}")
+    println(s"sequence... ${Option.sequenceViaTraverse(List(Some(1), Some(2), Some(3)))}")
+    println(s"sequence... ${Option.sequenceViaTraverse(List(None, Some(2), None))}")
+    println(s"sequence... ${Option.sequenceViaTraverse(List(Some(1), None, Some(3)))}")
+    println(s"sequence... ${Option.sequenceViaTraverse(List(Some(1), Some(2), None))}")
+  }
 }
