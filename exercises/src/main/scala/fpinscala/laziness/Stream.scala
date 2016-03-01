@@ -60,13 +60,36 @@ trait Stream[+A] {
     foldRight(xs)((a, b) => Cons[B](() => a, () => b))
 
   def flatMap[B](f: A => Stream[B]): Stream[B] =
-   foldRight(Stream.empty[B])((a, b) => f(a).append(b))
+    foldRight(Stream.empty[B])((a, b) => f(a).append(b))
 
-//  def mapViaUnfold
-//  def takeViaUnfold
-//  def takeWhileViaUnfold
-//  def zipWithViaUnfold
-//  def zipAllViaUnfold[B](s2: Stream[B]): Stream[(Option[A],Option[B])] = ???
+  // 5.13 - map, take, takeWhile, zipWidth and zipAll via unfold
+
+  def mapViaUnfold[B](f: A => B): Stream[B] = unfold(this) {
+    case Cons(h, t) => Some(f(h()), t())
+    case Empty => None
+  }
+
+  def takeViaUnfold(n: Int): Stream[A] = unfold((this,n)) {
+    case (Cons(h,t), z) if z > 0 => Some(h(), (t(),z-1))
+    case _ => None
+  }
+
+  def takeWhileViaUnfold(f: A => Boolean): Stream[A] = unfold(this) {
+    case Cons(h,t) if f(h()) => Some(h(), t())
+    case _ => None
+  }
+
+  def zipWithViaUnfold[B,C](rs: Stream[B])(f: (A,B) => C): Stream[C] = unfold((this, rs)) {
+    case (Cons(lh,lt), Cons(rh,rt)) => Some(( f(lh(),rh()), (lt(),rt()) ))
+    case _ => None
+  }
+
+  def zipAllViaUnfold[B](rs: Stream[B]): Stream[(Option[A],Option[B])] = unfold((this, rs)) {
+    case (Cons(lh,lt), Cons(rh,rt)) => Some( (Some(lh()),Some(rh())), (lt(),rt()) )
+    case (Cons(lh,lt), Empty) => Some( (Some(lh()),None), (lt(),Empty) )
+    case (Empty, Cons(rh,rt)) => Some( (None,Some(rh())), (Empty,rt()) )
+    case _ => None
+  }
 
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
 }
@@ -105,7 +128,7 @@ object Stream {
     case None => empty
   }
 
-  def fibsViaUnfozd: Stream[Int] = Stream.cons(0, Stream.cons(1, unfold((0,1))(z => Some((z._2+z._1, (z._1, z._2+z._1))))))
+  def fibsViaUnfold: Stream[Int] = Stream.cons(0, Stream.cons(1, unfold((0,1))(z => Some((z._2+z._1, (z._1, z._2+z._1))))))
 
   def fromViaUnfold(n: Int): Stream[Int] = unfold(n)(z => Some((z, z+1)))
 
@@ -120,7 +143,6 @@ object StreamTest {
     println(s"test")
   }
 }
-// 5.13
-// 5.14
+// 5.14 - startsWith using functions you've written
 // 5.15
 // 5.16
