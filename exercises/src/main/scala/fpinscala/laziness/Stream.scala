@@ -91,8 +91,44 @@ trait Stream[+A] {
     case _ => None
   }
 
-  def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+  // 5.14 - startsWith using functions you've written
+
+  def startsWith[B](s: Stream[B]): Boolean =
+    this.zipAllViaUnfold[B](s).takeWhile(!_._2.isEmpty).forAll { case (a,b) => a == b }
+
+  // 5.15 - tails using unfold
+
+  def tails: Stream[Stream[A]] = unfold(this) {
+    case Cons(h,t) => Some(Cons(h,t), t())
+    case _ => None
+  }.append(Stream(empty))
+
+  // 5.16 - generalize tails to the function scanRight
+
+  def scanRightNotLinearInN[B](z: => B)(f: (A, => B) => B): Stream[B] =
+      this.tails.map(i => i.foldRight(z)(f))
+
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] =
+    this.foldRight((z, Stream(z)))((newItem, p0) => {
+      lazy val p1 = p0 // lazy to ensure one evaluation
+      val lastIntermediate = p1._1
+      val lastAcc = p1._2
+
+      val newIntermediate = f(newItem, lastIntermediate)
+      val newAcc = cons(newIntermediate, lastAcc)
+
+      (newIntermediate, newAcc)
+    })._2
+
+  // this adds a head evaluation of the accumulator stream to each iteration, but it's still linear in n
+  def scanRightWithOnlyAcc[B](z: => B)(f: (A, => B) => B): Stream[B] =
+    this.foldRight(Stream(z))((newItem, acc) => {
+      val newResult = f(newItem, acc.headOption.get)
+      cons(newResult, acc)
+    })
+
 }
+
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
 
@@ -143,6 +179,3 @@ object StreamTest {
     println(s"test")
   }
 }
-// 5.14 - startsWith using functions you've written
-// 5.15
-// 5.16
